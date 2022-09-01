@@ -6,6 +6,7 @@ Binaries=( "go" "helm" "make" "kubectl" "docker" )     # binaries that need to b
 busBoyPort="8085"                                      # busboy port
 version="v1.0"                                         # docker image version
 Dockerfile="Dockerfile"                                # name of docker file to build image from
+Files="files"
 
 # Function definitions:
 function checkBinaryInPath(){
@@ -34,36 +35,46 @@ fi
 # check if the docker image already exists
 docker images |grep busboy |grep $version |grep -v grep
 dockerImageResult=$?
-if [ $dockerImageResult -eq 0 ];then
-        echo "Docker Image busboy:$version already exists, change version from $version and run again"
-        exit 1
-fi
 
-if [ ! -d "$busBoyDir" ];then
-	echo "Cant find the directory $busBoyDir, exiting"
-	exit 1
-fi
+if [ $dockerImageResult -ne 0 ];then
+	if [ ! -d "$busBoyDir" ];then
+        	echo "Cant find the directory $busBoyDir, exiting"
+	        exit 1
+	fi
 
-cd $busBoyDir
+	if [ ! -d "$Files" ];then
+        	echo "Cant find the directory $Files, exiting"
+	        exit 1
+	fi
 
-echo "Cleaning old builds of busboy"
-make clean
-echo "Building busboy Now"
-make
+        if [ ! -f "$Files/index.html" ];then
+                echo "Cant find the index file $Files/index.html, exiting"
+                exit 1
+        fi
 
-cd ..
+	cd $busBoyDir
 
-if [ ! -f "$busBoyDir/build/busboy" ];then
-	echo "Cant find the $busBoyDir/build/busboy binary, exiting"
-	exit 1
-fi
+	echo "Cleaning old builds of busboy"
+	make clean
+	echo "Building busboy Now"
+	make
 
-if [ -f "$Dockerfile" ];then
-	echo "Found $Dockerfile, building image now"
-	docker build -t busboy:$version -f Dockerfile .	
+	cd ..
+
+	if [ ! -f "$busBoyDir/build/busboy" ];then
+	        echo "Cant find the $busBoyDir/build/busboy binary, exiting"
+        	exit 1
+	fi
+
+	if [ -f "$Dockerfile" ];then
+  	      echo "Found $Dockerfile, building image now"
+        	docker build -t busboy:$version -f Dockerfile .
+	else
+	        echo "Cant find $Dockerfile exiting"
+        	exit 1
+	fi
 else
-	echo "Cant find $Dockerfile exiting"
-	exit 1
+        echo "Docker Image busboy:$version already exists skipping build of docker image using verwion $version"
 fi
 
 echo "Completed script sucessfully"
